@@ -6,6 +6,12 @@ class Controller {
     }
 
     createModal() {
+        if (this.active_button === 'Вход') {
+            this.active_button_className = 'login'
+        } else {
+            this.active_button_className = 'reg'
+        }
+
         const fragment = document.createElement('div')
         fragment.className = 'auth-modal-overlay'
         fragment.innerHTML = `
@@ -13,8 +19,8 @@ class Controller {
                     <button class="close-btn">&times;</button>
         
                     <div class="auth-tabs">
-                        <button class="tab-btn active" data-tab="login">Вход</button>
-                        <button class="tab-btn" data-tab="register">Регистрация</button>
+                        <button class="tab-btn log active">Вход</button>
+                        <button class="tab-btn reg">Регистрация</button>
                     </div>
         
                     <div class="tab-content">
@@ -32,7 +38,7 @@ class Controller {
                                 <input type="email" placeholder="Email" required>
                                 <input type="password" placeholder="Пароль" required>
                                 <input type="password" placeholder="Повторите пароль" required>
-                                <button type="submit" class="submit-btn">Зарегистрироваться</button>
+                                <button class='submit-btn'>Зарегистрироваться</button>
                             </form>
                         </div>
                     </div>
@@ -55,6 +61,7 @@ class Controller {
                 </div>
         `;
 
+
         fragment.querySelector('.close-btn').addEventListener('click', () => {
             document.body.removeChild(fragment)
         })
@@ -63,22 +70,34 @@ class Controller {
         return fragment
     }
 
-    reg_log_btnHandler(modal) {
+    reg_log_btnHandlers(modal) {
         modal.addEventListener('click', (e) => {
             if (e.target.classList.contains('tab-btn')) {
                 const btns = document.querySelectorAll('.tab-btn')
                 btns.forEach((i) => {
                     i.classList.remove('active')
                 })
-            }
 
-            e.target.classList.add('active')
+                e.target.classList.add('active')
+
+                modal.querySelectorAll('.tab-pane').forEach((i) => {
+                    i.classList.remove('active')
+                })
+
+                if (e.target.classList.contains('log')) {
+                    modal.querySelector('#login').classList.add('active')
+                } else if (e.target.classList.contains('reg')) {
+                    modal.querySelector('#register').classList.add('active')
+                }
+            } else if (e.target.classList.contains('')) {
+
+            }
         })
     }
 
     logHandler() {
         const modal = this.createModal()
-        this.reg_log_btnHandler(modal)
+        this.reg_log_btnHandlers(modal)
     }
 
     start() {
