@@ -3,6 +3,15 @@ class Controller {
         this.logBtn = document.querySelector('#login-btn')
         this.createModal = this.createModal.bind(this)
         this.logHandler = this.logHandler.bind(this)
+        this.socket = null
+    }
+
+    init_socket() {
+        this.socket = io()
+
+        this.socket.on('connect', () => {
+            console.log('Socket connect');
+        })
     }
 
     createModal() {
@@ -25,20 +34,19 @@ class Controller {
         
                     <div class="tab-content">
                         <div class="tab-pane active" id="login">
-                            <form class="auth-form">
-                                <input type="email" placeholder="Email" required>
-                                <input type="password" placeholder="Пароль" required>
+                            <form class="auth-form" method='POST' action='/api/login' onsubmit="return false">
+                                <input type="email" name="email" placeholder="Email" required>
+                                <input type="password" name="password" placeholder="Пароль" required>
                                 <button type="submit" class="submit-btn">Войти</button>
                             </form>
                         </div>
-            
+
                         <div class="tab-pane" id="register">
-                            <form class="auth-form">
-                                <input type="text" placeholder="Имя" required>
-                                <input type="email" placeholder="Email" required>
-                                <input type="password" placeholder="Пароль" required>
-                                <input type="password" placeholder="Повторите пароль" required>
-                                <button class='submit-btn'>Зарегистрироваться</button>
+                            <form class="auth-form" method='POST' action='/api/register' onsubmit="return false">
+                                <input type="text" name="name" placeholder="Имя" required>
+                                <input type="email" name="email" placeholder="Email" required>
+                                <input type="password" name="password" placeholder="Пароль" required>
+                                <button type="submit"class="submit-btn">Зарегистрироваться</button>
                             </form>
                         </div>
                     </div>
@@ -61,6 +69,55 @@ class Controller {
                 </div>
         `;
 
+        fragment.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+
+            if (e.target.closest('#login')) {
+                console.log('Логин данные:', data);
+                try {
+                    const response = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    const result = await response.json();
+                    console.log('Ответ сервера (логин):', result);
+                    e.target.reset()
+                    alert(result.message)
+
+                    if (result.success) {
+                        document.querySelector('#login-btn').remove()
+                        document.body.removeChild(fragment)
+                        localStorage.setItem('is_login', true)
+                    }
+                } catch (error) {
+                    console.error('Ошибка входа:', error);
+                }
+            } else if (e.target.closest('#register')) {
+                console.log('Регистрация данные:', data);
+                try {
+                    const response = await fetch('/api/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    const result = await response.json();
+                    console.log('Ответ сервера (регистрация):', result);
+                    e.target.reset()
+                    alert(result.message)
+
+                    if (result.success) {
+                        document.body.removeChild(fragment)
+                    }
+                } catch (error) {
+                    console.error('Ошибка регистрации:', error);
+                }
+            }
+        });
+
 
         fragment.querySelector('.close-btn').addEventListener('click', () => {
             document.body.removeChild(fragment)
@@ -70,7 +127,7 @@ class Controller {
         return fragment
     }
 
-    reg_log_btnHandlers(modal) {
+    btnsHandlers(modal) {
         modal.addEventListener('click', (e) => {
             if (e.target.classList.contains('tab-btn')) {
                 const btns = document.querySelectorAll('.tab-btn')
@@ -89,7 +146,9 @@ class Controller {
                 } else if (e.target.classList.contains('reg')) {
                     modal.querySelector('#register').classList.add('active')
                 }
-            } else if (e.target.classList.contains('')) {
+            } else if (e.target.classList.contains('login-btn')) {
+
+            } else if (e.target.classList.contains('register-btn')) {
 
             }
         })
@@ -97,12 +156,134 @@ class Controller {
 
     logHandler() {
         const modal = this.createModal()
-        this.reg_log_btnHandlers(modal)
+        this.btnsHandlers(modal)
+    }
+
+    createChatModal() {
+        const fragment = document.createElement('div');
+        fragment.className = 'chat-modal-overlay';
+
+        fragment.innerHTML = `
+        <div class="chat-modal">
+            <div class="chat-header">
+                <div class="chat-user-info">
+                    <div class="user-avatar">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <div class="user-details">
+                        <h3>Чат поддержки</h3>
+                        <span class="user-status online">• Онлайн</span>
+                    </div>
+                </div>
+                <button class="chat-close-btn">&times;</button>
+            </div>
+
+            <div class="chat-messages">
+                <div class="message received">
+                    <div class="message-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="message-content">
+                        <div class="message-text">Здравствуйте, укажите, что хотите заказать.</div>
+                        <div class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <div class="input-wrapper">
+                    <input type="text" class="chat-input" placeholder="Введите сообщение...">
+                    <button class="send-btn">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+        // обработчики
+        const closeBtn = fragment.querySelector('.chat-close-btn');
+        closeBtn.addEventListener('click', () => {
+            document.body.removeChild(fragment);
+        });
+
+        // закрытие по клику вне модалки
+        fragment.addEventListener('click', (e) => {
+            if (e.target === fragment) {
+                document.body.removeChild(fragment);
+            }
+        });
+
+        // отправка сообщения
+        const sendBtn = fragment.querySelector('.send-btn');
+        const chatInput = fragment.querySelector('.chat-input');
+
+        const sendMessage = () => {
+            const text = chatInput.value.trim();
+            if (text) {
+                const messagesContainer = fragment.querySelector('.chat-messages');
+
+                //новое сообщение
+                const messageHTML = `
+                <div class="message sent">
+                    <div class="message-content">
+                        <div class="message-text">${text}</div>
+                        <div class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+                    <div class="message-avatar">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                </div>
+                `;
+
+                messagesContainer.insertAdjacentHTML('beforeend', messageHTML);
+                chatInput.value = '';
+
+                // прокрутка вниз
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+                this.socket.emit('new_message', {
+                    message: text, 
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                })
+            }
+        };
+
+        sendBtn.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        document.body.appendChild(fragment);
+
+        setTimeout(() => {
+            fragment.querySelector('.chat-input').focus();
+        }, 100);
+
+        return fragment;
     }
 
     start() {
+        this.init_socket()
         this.logBtn.addEventListener('click', this.logHandler)
+        document.querySelectorAll('.btn-primary').forEach((i) => {
+            i.addEventListener('click', () => {
+                if (localStorage.getItem('is_login')) {
+                    this.createChatModal()
+                } else {
+                    alert('Чтобы выбрать бокс - зарегестрируйтесь')
+                }
+            })
+        });
     }
+}
+
+//localStorage.removeItem('is_login')
+
+if (localStorage.getItem('is_login')) {
+    document.querySelector('#login-btn').style.display = 'none'
 }
 
 const controller = new Controller()
