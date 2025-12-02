@@ -83,7 +83,6 @@
     position: relative;
 }
 
-/* Стили скроллбара */
 .panel-content::-webkit-scrollbar {
     width: 6px;
 }
@@ -97,7 +96,6 @@
     border-radius: 3px;
 }
 
-/* Декоративные элементы */
 .admin-panel::before {
     content: '';
     position: absolute;
@@ -153,7 +151,6 @@
     white-space: nowrap;
 }
 
-/* Для активного чата */
 .chat-mini-line.active {
     border-color: #d4af37;
     background: linear-gradient(135deg, #2f1b0c 0%, #4a2c1d 100%);
@@ -163,7 +160,6 @@
     opacity: 1;
 }
 
-/* Для чата с новыми сообщениями */
 .chat-mini-line.new::after {
     content: '';
     position: absolute;

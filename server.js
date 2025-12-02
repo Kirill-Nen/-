@@ -108,6 +108,6 @@ app.get('/api/users', (req, res) => {
     res.json(Array.from(users.values()));
 })
 
-server.listen(9000, '0.0.0.0', () => {
+server.listen(9000, () => {
     console.log('Server started');
 })
