@@ -425,6 +425,7 @@ class Controller {
 
         if (localStorage.getItem('role') === 'admin') {
             const admin_btn = document.createElement('li')
+            admin_btn.classList = 'admin-link'
             admin_btn.innerHTML = '<a>Админ панель</a>'
 
             admin_btn.addEventListener('click', showAdminSidebar)

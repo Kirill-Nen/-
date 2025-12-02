@@ -623,6 +623,10 @@ body {
     .nav-links li:not(.admin-link) {
         display: none;
     }
+
+    .hero {
+        margin-top: 50px;
+    }
     
     .hero-content {
         grid-template-columns: 1fr;
@@ -643,6 +647,10 @@ body {
     .hero-actions .btn {
         width: 100%;
         justify-content: center;
+    }
+
+    .btn-secondary {
+        margin-top: 10px;
     }
     
     .main-box {
