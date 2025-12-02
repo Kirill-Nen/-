@@ -12,6 +12,111 @@ class Controller {
         this.socket.on('connect', () => {
             console.log('Socket connect');
         })
+
+        this.socket.on('history', (history) => {
+            if (history.length !== 0) {
+                history.forEach((i) => {
+                    if (i.from === 'user') {
+                        const messagesContainer = document.querySelector('.chat-messages');
+
+                        const messageHTML = `
+                        <div class="message sent">
+                            <div class="message-content">
+                                <div class="message-text">${i.message}</div>
+                                <div class="message-time">${i.time}</div>
+                            </div>
+                            <div class="message-avatar">
+                                <i class="fas fa-user-circle"></i>
+                            </div>
+                        </div>>
+                        `;
+
+                        messagesContainer.insertAdjacentHTML('beforeend', messageHTML);
+
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    } else if (i.from === 'admin') {
+                        const messagesContainer = document.querySelector('.chat-messages');
+
+                        const messageHTML = `
+                        <div class="message received">
+                            <div class="message-avatar">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                        <div class="message-content">
+                            <div class="message-text">${i.message}</div>
+                                <div class="message-time">${i.time}</div>
+                            </div>
+                        </div>
+                        `;
+
+                        messagesContainer.insertAdjacentHTML('beforeend', messageHTML);
+
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    }
+                })
+            }
+        })
+
+        this.socket.on('chats', (chats) => {
+            if (JSON.stringify(chats) !== '{}') {
+                Object.entries(chats).forEach(([email, chatData]) => {
+                    const chatLine = document.createElement('div');
+                    chatLine.className = 'chat-line';
+
+                    chatLine.innerHTML = `
+                    <div class="chat-mini-line">
+                        <div class="chat-email">${email}</div>
+                    </div>`
+
+
+                    chatLine.querySelector('.chat-email').addEventListener('click', () => {
+                        this.createChatModal(email)
+                    })
+
+                    document.querySelector('.empty-container').appendChild(chatLine)
+                })
+            }
+        })
+
+        this.socket.on('message', (message) => {
+            if (message.from === 'user') {
+                const messagesContainer = document.querySelector('.chat-messages');
+
+                const messageHTML = `
+                        <div class="message sent">
+                            <div class="message-content">
+                                <div class="message-text">${message.message}</div>
+                                <div class="message-time">${message.time}</div>
+                            </div>
+                            <div class="message-avatar">
+                                <i class="fas fa-user-circle"></i>
+                            </div>
+                        </div>>
+                        `;
+
+                messagesContainer.insertAdjacentHTML('beforeend', messageHTML);
+
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            } else if (message.from === 'admin') {
+                const messagesContainer = document.querySelector('.chat-messages');
+
+                const messageHTML = `
+                        <div class="message received">
+                            <div class="message-avatar">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                        <div class="message-content">
+                            <div class="message-text">${message.message}</div>
+                                <div class="message-time">${message.time}</div>
+                            </div>
+                        </div>
+                        `;
+
+                messagesContainer.insertAdjacentHTML('beforeend', messageHTML);
+
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        })
     }
 
     createModal() {
@@ -92,6 +197,14 @@ class Controller {
                         document.querySelector('#login-btn').remove()
                         document.body.removeChild(fragment)
                         localStorage.setItem('is_login', true)
+
+                        if (result.isAdmin) {
+                            localStorage.setItem('role', 'admin')
+                        } else {
+                            localStorage.setItem('role', 'user')
+                        }
+
+                        this.admin_controller()//показ админ панели
                     }
                 } catch (error) {
                     console.error('Ошибка входа:', error);
@@ -108,6 +221,8 @@ class Controller {
                     console.log('Ответ сервера (регистрация):', result);
                     e.target.reset()
                     alert(result.message)
+
+                    localStorage.setItem('user_email', result.user.email)
 
                     if (result.success) {
                         document.body.removeChild(fragment)
@@ -146,10 +261,6 @@ class Controller {
                 } else if (e.target.classList.contains('reg')) {
                     modal.querySelector('#register').classList.add('active')
                 }
-            } else if (e.target.classList.contains('login-btn')) {
-
-            } else if (e.target.classList.contains('register-btn')) {
-
             }
         })
     }
@@ -159,7 +270,7 @@ class Controller {
         this.btnsHandlers(modal)
     }
 
-    createChatModal() {
+    createChatModal(room_id = localStorage.getItem('user_email')) {
         const fragment = document.createElement('div');
         fragment.className = 'chat-modal-overlay';
 
@@ -199,7 +310,7 @@ class Controller {
                 </div>
             </div>
         </div>
-    `;
+        `;
 
         // обработчики
         const closeBtn = fragment.querySelector('.chat-close-btn');
@@ -214,6 +325,8 @@ class Controller {
             }
         });
 
+        this.socket.emit('join_room', room_id)
+
         // отправка сообщения
         const sendBtn = fragment.querySelector('.send-btn');
         const chatInput = fragment.querySelector('.chat-input');
@@ -222,19 +335,33 @@ class Controller {
             const text = chatInput.value.trim();
             if (text) {
                 const messagesContainer = fragment.querySelector('.chat-messages');
+                let messageHTML
 
                 //новое сообщение
-                const messageHTML = `
-                <div class="message sent">
-                    <div class="message-content">
-                        <div class="message-text">${text}</div>
-                        <div class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                    </div>
-                    <div class="message-avatar">
-                        <i class="fas fa-user-circle"></i>
-                    </div>
-                </div>
-                `;
+                if (localStorage.getItem('role') === 'user') {
+                    messageHTML = `
+                        <div class="message sent">
+                            <div class="message-content">
+                                <div class="message-text">${text}</div>
+                                <div class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                            </div>
+                            <div class="message-avatar">
+                                <i class="fas fa-user-circle"></i>
+                            </div>
+                        </div>
+                    `;
+                } else if (localStorage.getItem('role') === 'admin') {
+                    messageHTML = `
+                    <div class="message received">
+                        <div class="message-avatar">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="message-content">
+                            <div class="message-text">${text}</div>
+                            <div class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                        </div>
+                    </div>`
+                }
 
                 messagesContainer.insertAdjacentHTML('beforeend', messageHTML);
                 chatInput.value = '';
@@ -243,9 +370,10 @@ class Controller {
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
                 this.socket.emit('new_message', {
-                    message: text, 
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                })
+                    message: text,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    from: localStorage.getItem('role')
+                }, room_id)
             }
         };
 
@@ -265,22 +393,66 @@ class Controller {
         return fragment;
     }
 
+    admin_controller() {
+        function showAdminSidebar() {
+            if (document.querySelector('.admin-panel')) {
+                document.body.removeChild(document.querySelector('.admin-panel'))
+            }
+
+            const panel = document.createElement('div');
+            panel.className = 'admin-panel';
+            panel.innerHTML = `
+                <div class="panel-header">
+                    <h3>Админ Панель</h3>
+                    <button class="close-panel">×</button>
+                </div>
+                <div class="panel-content">
+                    <div class="empty-container"></div>
+                </div>
+            `;
+
+            document.body.appendChild(panel);
+
+            setTimeout(() => panel.classList.add('active'), 10);
+
+            panel.querySelector('.close-panel').addEventListener('click', () => {
+                panel.classList.remove('active');
+                setTimeout(() => panel.remove(), 400);
+            });
+
+            controller.socket.emit('get_chats', localStorage.getItem('role'))
+        }
+
+        if (localStorage.getItem('role') === 'admin') {
+            const admin_btn = document.createElement('li')
+            admin_btn.innerHTML = '<a>Админ панель</a>'
+
+            admin_btn.addEventListener('click', showAdminSidebar)
+
+            document.querySelector('.nav-links').appendChild(admin_btn)
+        }
+    }
+
     start() {
         this.init_socket()
+        this.admin_controller()
         this.logBtn.addEventListener('click', this.logHandler)
-        document.querySelectorAll('.btn-primary').forEach((i) => {
+        document.querySelectorAll('.buy').forEach((i) => {
             i.addEventListener('click', () => {
                 if (localStorage.getItem('is_login')) {
                     this.createChatModal()
                 } else {
-                    alert('Чтобы выбрать бокс - зарегестрируйтесь')
+                    alert('Чтобы выбрать бокс - зарегистрируйтесь')
                 }
             })
         });
     }
 }
 
-//localStorage.removeItem('is_login')
+/*localStorage.removeItem('is_login')
+localStorage.removeItem('user_email')
+localStorage.removeItem('role')*/
+
 
 if (localStorage.getItem('is_login')) {
     document.querySelector('#login-btn').style.display = 'none'

@@ -8,10 +8,36 @@ const server = http.createServer(app)
 const io = new Server(server)
 
 const users = new Map()
+const chats = new Map()
 
 io.on('connection', (socket) => {
     console.log('Socket connect');
     
+    socket.on('join_room', (room_id) => {
+        socket.join(room_id)
+
+        if (!chats.has(room_id)) {
+            chats.set(room_id, {
+                history: []
+            })
+        }
+
+        socket.emit('history', chats.get(room_id).history)
+    })
+
+    socket.on('new_message', (message, room_id) => {
+        const room = chats.get(room_id)
+
+        room.history.push(message)
+
+        socket.to(room_id).emit('message', message)
+    })
+
+    socket.on('get_chats', (role) => {
+        if (role === 'admin') {
+            socket.emit('chats',  Object.fromEntries(chats))
+        }
+    })
 })
 
 app.use(express.static(path.join(__dirname)))
@@ -82,6 +108,6 @@ app.get('/api/users', (req, res) => {
     res.json(Array.from(users.values()));
 })
 
-server.listen(9000, () => {
+server.listen(9000, '0.0.0.0', () => {
     console.log('Server started');
 })
