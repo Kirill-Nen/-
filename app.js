@@ -270,7 +270,7 @@ class Controller {
         this.btnsHandlers(modal)
     }
 
-    createChatModal(room_id = localStorage.getItem('user_email')) {
+    createChatModal(room_id = localStorage.getItem('user_email'), text) {
         const fragment = document.createElement('div');
         fragment.className = 'chat-modal-overlay';
 
@@ -311,6 +311,8 @@ class Controller {
             </div>
         </div>
         `;
+
+        fragment.querySelector('.chat-input').value = `Здравствуйте, я бы хотел заказать ${text ? text : ''}`;
 
         // обработчики
         const closeBtn = fragment.querySelector('.chat-close-btn');
@@ -439,9 +441,9 @@ class Controller {
         this.admin_controller()
         this.logBtn.addEventListener('click', this.logHandler)
         document.querySelectorAll('.buy').forEach((i) => {
-            i.addEventListener('click', () => {
+            i.addEventListener('click', (e) => {
                 if (localStorage.getItem('is_login')) {
-                    this.createChatModal()
+                    this.createChatModal(undefined, e.target.parentElement.querySelector('h3').textContent)
                 } else {
                     alert('Чтобы выбрать бокс - зарегистрируйтесь')
                 }
